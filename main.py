@@ -38,27 +38,34 @@ session.headers = {
 # CONFIGURATION
 # *********************************************** #
 
-bo = "Person"
-code = "100000123"
-
 # *********************************************** #
 # MAIN
 # *********************************************** #
 
 if __name__ == "__main__":
 
-    ### CREATE BO
-    log.info(f"Creating instance of business object {bo}")
-    body = {
-        "values": {
-            "FirstName": "John",
-            "Initials": "JD",
-            "LastName": "Doe",
-            "RefBOStateUserDefined": 1079,
+    ### Source identities
+    source_identities = requests.get(url="https://randomuser.me/api?results=100").json()['results']
+
+    for source_identity in source_identities:
+        log.info(f"Creating instance of Person object {source_identity['name']['last']}, {source_identity['name']['first']}")
+
+        ### CREATE BO
+        body = {
+            "values": {
+                "FirstName": source_identity['name']['first'],
+                "Initials": f"{source_identity['name']['first'][0]}{source_identity['name']['last'][0]}",
+                "LastName": source_identity['name']['last'],
+                "RefBOStateUserDefined": 1079,
+            }
         }
-    }
-    response = session.post(url=f"{url}/execute/{bo}/BomAdd", json=body)
-    log.debug(f"API response: {response.json()}")
+
+        try:
+            response = session.post(url=f"{url}/execute/UsrEmployee/BomAdd", json=body)
+            response.raise_for_status()
+        except Exception as e:
+            log.error(repr(e))
+        log.debug(f"API response: {response.json()}")
 
     ### READ BO
     filter = {
@@ -66,5 +73,5 @@ if __name__ == "__main__":
             "Code": {'eq': 471}
         }
     }
-    response = session.post(url=f"{url}/read/{bo}", json=filter)
+    response = session.post(url=f"{url}/read/Person", json=filter)
     log.info(f"Found [{len(response.json()['records'])}] records for filter={filter}")
