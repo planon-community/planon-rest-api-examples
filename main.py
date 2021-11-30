@@ -46,14 +46,15 @@ code = "100000123"
 # *********************************************** #
 
 if __name__ == "__main__":
+
     ### CREATE BO
     log.info(f"Creating instance of business object {bo}")
     body = {
         "values": {
-            "Code": code,
             "FirstName": "John",
             "Initials": "JD",
             "LastName": "Doe",
+            "RefBOStateUserDefined": 1079,
         }
     }
     response = session.post(url=f"{url}/execute/{bo}/BomAdd", json=body)
@@ -62,7 +63,7 @@ if __name__ == "__main__":
     ### READ BO
     filter = {
         "filter": {
-            "Code": {'eq': code}
+            "Code": {'eq': 471}
         }
     }
     response = session.post(url=f"{url}/read/{bo}", json=filter)
