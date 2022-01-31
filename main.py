@@ -2,6 +2,7 @@ import os
 import time
 import sys
 import logging
+import json
 
 import requests
 
@@ -29,14 +30,38 @@ session = requests.Session()
 
 url = os.environ.get("PLN_API_URL")
 
-session.headers = {
+session.headers.update({
     "Content-Type": "application/json",
     "Authorization": f"PLANONKEY accesskey={os.environ.get('PLN_API_KEY')}"
-}
+})
 
 # *********************************************** #
 # CONFIGURATION
 # *********************************************** #
+
+max_pages = 100
+max_results = 5000
+time_sleep = 120
+seed = "dartmouth"
+
+# *********************************************** #
+# CACHE
+# *********************************************** #
+
+# IDENTITIES
+identities = []
+for page in range(1, max_pages):
+    response = requests.get(url=f"https://randomuser.me/api?seed={seed}&results={max_results}&page={page}")
+
+    # Throttling
+    log.info(f"Sleeping for {time_sleep} seconds")
+    time.sleep(time_sleep)
+
+    if response.ok:
+        identities = identities + response.json()['results']
+
+with open(file='cache/identies.json', mode='w') as file:
+    file.write(json.dumps(identities))
 
 # *********************************************** #
 # MAIN
@@ -63,9 +88,10 @@ if __name__ == "__main__":
         try:
             response = session.post(url=f"{url}/execute/UsrEmployee/BomAdd", json=body)
             response.raise_for_status()
+
+            log.debug(f"API response: {response.json()}")
         except Exception as e:
             log.error(repr(e))
-        log.debug(f"API response: {response.json()}")
 
     ### READ BO
     filter = {
