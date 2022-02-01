@@ -98,6 +98,7 @@ if __name__ == "__main__":
     ### LOAD IDENTITIES
 
     request_statistics = []
+    records = []
 
     start_time = time.time()
     for identity in identities:
@@ -110,7 +111,8 @@ if __name__ == "__main__":
                 "Initials": f"{identity['name']['first'][0]}{identity['name']['last'][0]}",
                 "LastName": identity['name']['last'],
                 "RefBOStateUserDefined": 1079,
-                "PersonPositionRef": random.choice(positions)
+                "PersonPositionRef": random.choice(positions)['Syscode'],
+                "DepartmentRef": random.choice(departments)['Syscode']
             }
         }
 
@@ -119,9 +121,16 @@ if __name__ == "__main__":
             response = session.post(url=f"{url}/execute/UsrEmployee/BomAdd", json=body)
             request_end_time = time.time()
 
+            request_statistics.append({
+                "start": request_start_time,
+                "end": request_end_time,
+                "response_code": response.status_code
+            })
+
             response.raise_for_status()
 
-            log.debug(f"API response: {response.json()}")
+            records = records + response.json()['records']
+
         except Exception as e:
             log.error(repr(e))
 
