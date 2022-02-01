@@ -83,64 +83,74 @@ with open(file='cache/positions.json', mode='w') as file:
 # MAIN
 # *********************************************** #
 
-if __name__ == "__main__":
+### LOAD CACHE
+with open(file='cache/identities.json', mode='r') as file:
+    identities = json.load(file)
 
-    ### LOAD CACHE
-    with open(file='cache/identities.json', mode='r') as file:
-        identities = json.load(file)
+with open(file='cache/departments.json', mode='r') as file:
+    departments = json.load(file)
 
-    with open(file='cache/departments.json', mode='r') as file:
-        departments = json.load(file)
+with open(file='cache/positions.json', mode='r') as file:
+    positions = json.load(file)
 
-    with open(file='cache/positions.json', mode='r') as file:
-        positions = json.load(file)
+### LOAD IDENTITIES
 
-    ### LOAD IDENTITIES
+failed = []
+request_statistics = []
+records = []
 
-    request_statistics = []
-    records = []
+start_time = time.time()
+for identity in identities:
+    log.info(f"Creating instance of Person object {identity['name']['last']}, {identity['name']['first']}")
 
-    start_time = time.time()
-    for identity in identities:
-        log.info(f"Creating instance of Person object {identity['name']['last']}, {identity['name']['first']}")
-
-        ### CREATE BO
-        body = {
-            "values": {
-                "FirstName": identity['name']['first'],
-                "Initials": f"{identity['name']['first'][0]}{identity['name']['last'][0]}",
-                "LastName": identity['name']['last'],
-                "RefBOStateUserDefined": 1079,
-                "PersonPositionRef": random.choice(positions)['Syscode'],
-                "DepartmentRef": random.choice(departments)['Syscode']
-            }
-        }
-
-        try:
-            request_start_time = time.time()
-            response = session.post(url=f"{url}/execute/UsrEmployee/BomAdd", json=body)
-            request_end_time = time.time()
-
-            request_statistics.append({
-                "start": request_start_time,
-                "end": request_end_time,
-                "response_code": response.status_code
-            })
-
-            response.raise_for_status()
-
-            records = records + response.json()['records']
-
-        except Exception as e:
-            log.error(repr(e))
-
-    end_time = time.time()
-
-    ### READ BO
-    filter = {
-        "filter": {
-            "Code": {'eq': 471}
+    ### CREATE BO
+    body = {
+        "values": {
+            "FirstName": identity['name']['first'],
+            "Initials": f"{identity['name']['first'][0]}{identity['name']['last'][0]}",
+            "LastName": identity['name']['last'],
+            "RefBOStateUserDefined": 1079,
+            "PersonPositionRef": random.choice(positions)['Syscode'],
+            "DepartmentRef": random.choice(departments)['Syscode']
         }
     }
-    response = session.post(url=f"{url}/read/Person", json=filter)
-    log.info(f"Found [{len(response.json()['records'])}] records for filter={filter}")
+
+    try:
+        request_start_time = time.time()
+        response = session.post(url=f"{url}/execute/UsrEmployee/BomAdd", json=body)
+        request_end_time = time.time()
+
+        request_statistics.append({
+            "start": request_start_time,
+            "end": request_end_time,
+            "response_code": response.status_code
+        })
+
+        response.raise_for_status()
+
+        records = records + response.json()['records']
+
+    except Exception as e:
+        log.error(repr(e))
+        failed.append({
+            'body': body,
+            'error': repr(e)
+        })
+
+end_time = time.time()
+total_duration = (end_time - start_time) / 60
+
+# *********************************************** #
+# STATISTICS
+# *********************************************** #
+
+log.info("# ======================= STATISTICS ======================= #")
+log.info(f"TOTAL DURATION (seconds): {total_duration}")
+log.info(f"TOTAL SOURCE RECORDS: {len(identities)}")
+log.info(f"TOTAL PLANON RECORDS: {len(records)}")
+
+
+# *********************************************** #
+# CLEANUP
+# *********************************************** #
+
