@@ -3,6 +3,7 @@ import time
 import sys
 import logging
 import json
+import random
 
 import requests
 
@@ -39,7 +40,7 @@ session.headers.update({
 # CONFIGURATION
 # *********************************************** #
 
-max_pages = 100
+max_pages = 15
 max_results = 5000
 time_sleep = 120
 seed = "dartmouth"
@@ -48,9 +49,10 @@ seed = "dartmouth"
 # CACHE
 # *********************************************** #
 
-# IDENTITIES
+################# IDENTITIES #################
 identities = []
 for page in range(1, max_pages):
+    # TODO: cache additional identies, left off at page 7
     response = requests.get(url=f"https://randomuser.me/api?seed={seed}&results={max_results}&page={page}")
 
     # Throttling
@@ -60,8 +62,22 @@ for page in range(1, max_pages):
     if response.ok:
         identities = identities + response.json()['results']
 
-with open(file='cache/identies.json', mode='w') as file:
+with open(file='cache/identities.json', mode='w') as file:
     file.write(json.dumps(identities))
+
+################# DEPARTMENTS #################
+
+departments = session.post(url=f"{url}/read/Department", json={}).json()['records']
+
+with open(file='cache/departments.json', mode='w') as file:
+    file.write(json.dumps(departments))
+
+################# DEPARTMENTS #################
+
+positions = session.post(url=f"{url}/read/PersonPosition", json={}).json()['records']
+
+with open(file='cache/positions.json', mode='w') as file:
+    file.write(json.dumps(positions))
 
 # *********************************************** #
 # MAIN
@@ -69,29 +85,47 @@ with open(file='cache/identies.json', mode='w') as file:
 
 if __name__ == "__main__":
 
-    ### Source identities
-    source_identities = requests.get(url="https://randomuser.me/api?results=100").json()['results']
+    ### LOAD CACHE
+    with open(file='cache/identities.json', mode='r') as file:
+        identities = json.load(file)
 
-    for source_identity in source_identities:
-        log.info(f"Creating instance of Person object {source_identity['name']['last']}, {source_identity['name']['first']}")
+    with open(file='cache/departments.json', mode='r') as file:
+        departments = json.load(file)
+
+    with open(file='cache/positions.json', mode='r') as file:
+        positions = json.load(file)
+
+    ### LOAD IDENTITIES
+
+    request_statistics = []
+
+    start_time = time.time()
+    for identity in identities:
+        log.info(f"Creating instance of Person object {identity['name']['last']}, {identity['name']['first']}")
 
         ### CREATE BO
         body = {
             "values": {
-                "FirstName": source_identity['name']['first'],
-                "Initials": f"{source_identity['name']['first'][0]}{source_identity['name']['last'][0]}",
-                "LastName": source_identity['name']['last'],
+                "FirstName": identity['name']['first'],
+                "Initials": f"{identity['name']['first'][0]}{identity['name']['last'][0]}",
+                "LastName": identity['name']['last'],
                 "RefBOStateUserDefined": 1079,
+                "PersonPositionRef": random.choice(positions)
             }
         }
 
         try:
+            request_start_time = time.time()
             response = session.post(url=f"{url}/execute/UsrEmployee/BomAdd", json=body)
+            request_end_time = time.time()
+
             response.raise_for_status()
 
             log.debug(f"API response: {response.json()}")
         except Exception as e:
             log.error(repr(e))
+
+    end_time = time.time()
 
     ### READ BO
     filter = {
