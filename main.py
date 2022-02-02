@@ -172,4 +172,8 @@ for chunk in chunked_records:
         }}
     }}'''
 
-    response = session.post(url=f"{url}/delete/UsrEmployee", data=body)
+    # b'{"uuid":"334ead57-11a1-4e0f-a6bf-f010a075d055","message":"Execute on multiple BO\'s not implemented"}'
+    # response = session.post(url=f"{url}/execute/UsrEmployee/BomDelete", data=body)
+
+    response = session.post(url=f"{url}/read/UsrEmployee", data=body)
+    len(response.json()['records']) == chunk_size
