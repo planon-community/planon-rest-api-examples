@@ -149,8 +149,27 @@ log.info(f"TOTAL DURATION (seconds): {total_duration}")
 log.info(f"TOTAL SOURCE RECORDS: {len(identities)}")
 log.info(f"TOTAL PLANON RECORDS: {len(records)}")
 
-
 # *********************************************** #
 # CLEANUP
 # *********************************************** #
 
+chunk_size = 1000
+syscodes = [record['Syscode'] for record in records]
+chunked_records = [syscodes[i:i + chunk_size] for i in range(0, len(syscodes))]
+
+'''{
+    "filter": {
+        "Syscode": {"ge": 1},
+        "Syscode": {"le": 100}
+    }
+}'''
+
+for chunk in chunked_records:
+    body = f'''{{
+        "filter": {{
+            "Syscode": {{"ge": {chunk[0]}}},
+            "Syscode": {{"le": {chunk[-1]}}}
+        }}
+    }}'''
+
+    response = session.post(url=f"{url}/delete/UsrEmployee", data=body)
